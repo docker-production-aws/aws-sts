@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  author: Justin Menga
+  description: Uses the AWS STS service to assume an IAM role
+  license: MIT
+  min_ansible_version: 2.2
+  categories:
+  - cloud
+  galaxy_tags:
+  - aws
+  - sts

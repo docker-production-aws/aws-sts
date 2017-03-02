@@ -1,0 +1,60 @@
+---
+- block:
+  - set_fact:
+      sts_region: "{{ sts_region 
+        | default(lookup('env', 'AWS_DEFAULT_REGION')) 
+        | default('us-west-2', true) }}"
+  tags:
+    - always
+
+- block:
+  - name: checking if sts functions are sts_disabled
+    debug: msg="Skipping STS functions as sts_disabled is defined"
+  - name: setting empty sts_session_output result
+    set_fact:
+      sts_session_output: {}
+      sts_creds: {}
+  - name: setting sts_creds if legacy AWS credentials are present (e.g. for Ansible Tower)
+    set_fact:
+      sts_creds:
+        AWS_DEFAULT_REGION: "{{ sts_region }}"
+        AWS_ACCESS_KEY: "{{ lookup('env','AWS_ACCESS_KEY') }}"
+        AWS_ACCESS_KEY_ID: "{{ lookup('env','AWS_ACCESS_KEY') }}"
+        AWS_SECRET_KEY: "{{ lookup('env','AWS_SECRET_KEY') }}"
+        AWS_SECRET_ACCESS_KEY: "{{ lookup('env','AWS_SECRET_KEY') }}"
+    when: lookup('env','AWS_ACCESS_KEY') and lookup('env','AWS_SECRET_KEY')
+  when: sts_disable | default(false) | bool
+  tags:
+    - always
+
+- block:
+  - name: assume sts role
+    environment:
+      AWS_DEFAULT_REGION: "{{ sts_region }}"
+    shell: aws sts assume-role
+      --role-arn="{{ sts_role_arn }}"
+      --role-session-name="{{ sts_role_session_name | default('adminSession') }}"
+    changed_when: False
+    register: sts_session_output
+  - name: set sts facts
+    set_fact:
+      sts_creds:
+        AWS_DEFAULT_REGION: "{{ sts_region }}"
+        AWS_ACCESS_KEY: "{{ (sts_session_output.stdout | from_json)['Credentials']['AccessKeyId'] }}"
+        AWS_ACCESS_KEY_ID: "{{ (sts_session_output.stdout | from_json)['Credentials']['AccessKeyId'] }}"
+        AWS_SECRET_KEY: "{{ (sts_session_output.stdout | from_json)['Credentials']['SecretAccessKey'] }}"
+        AWS_SECRET_ACCESS_KEY: "{{ (sts_session_output.stdout | from_json)['Credentials']['SecretAccessKey'] }}"
+        AWS_SECURITY_TOKEN: "{{ (sts_session_output.stdout | from_json)['Credentials']['SessionToken'] }}"
+  - name: set sts facts
+    set_fact:
+      sts_role:
+        sts_creds: "{{ sts_creds }}"
+  when: not sts_disable | default(false) | bool
+  tags:
+    - always
+
+- debug: msg={{ sts_session_output }}
+  when: debug | default(false) | bool
+  tags:
+    - always
+

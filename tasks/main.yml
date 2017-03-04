@@ -53,8 +53,10 @@
   tags:
     - always
 
-- debug: msg={{ sts_session_output }}
-  when: debug | default(false) | bool
+- block:
+  - debug: msg={{ sts_session_output }}
+  - debug: msg={{ sts_creds }}
+  when: debug | default(false) | bool  
   tags:
     - always
 

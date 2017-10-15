@@ -1,9 +1,15 @@
 ---
 - block:
+  - name: create sts variable
+    set_fact:
+      Sts: "{{ Sts | default({}) | combine((vars['hostvars'][env] | dotted_dict(paths=['Sts.'])).get('Sts') or {}, recursive=True) }}"
+
   - set_fact:
-      sts_region: "{{ sts_region 
+      sts_region: "{{ Sts.Region
         | default(lookup('env', 'AWS_DEFAULT_REGION')) 
         | default('us-west-2', true) }}"
+  - set_fact:
+      Sts: "{{ Sts | combine({'Region': sts_region},recursive=True) }}"
   tags:
     - always
 
@@ -23,42 +29,40 @@
         AWS_SECRET_KEY: "{{ lookup('env','AWS_SECRET_KEY') }}"
         AWS_SECRET_ACCESS_KEY: "{{ lookup('env','AWS_SECRET_KEY') }}"
     when: lookup('env','AWS_ACCESS_KEY') and lookup('env','AWS_SECRET_KEY')
-  when: sts_disable | default(false) | bool
+  when: Sts.Disabled | default(false) | bool
   tags:
     - always
 
 - block:
   - name: assume sts role
     environment:
-      AWS_DEFAULT_REGION: "{{ sts_region }}"
+      AWS_DEFAULT_REGION: "{{ Sts.Region }}"
     shell: aws sts assume-role
-      --role-arn="{{ sts_role_arn }}"
-      --role-session-name="{{ sts_role_session_name | default('adminSession') }}"
+      --role-arn="{{ Sts.Role }}"
+      --role-session-name="{{ Sts.SessionName | default('adminSession') }}"
     changed_when: False
     register: sts_session_output
   - name: set sts facts
     set_fact:
       sts_creds:
-        AWS_DEFAULT_REGION: "{{ sts_region }}"
+        AWS_DEFAULT_REGION: "{{ Sts.Region }}"
         AWS_ACCESS_KEY: "{{ (sts_session_output.stdout | from_json)['Credentials']['AccessKeyId'] }}"
         AWS_ACCESS_KEY_ID: "{{ (sts_session_output.stdout | from_json)['Credentials']['AccessKeyId'] }}"
         AWS_SECRET_KEY: "{{ (sts_session_output.stdout | from_json)['Credentials']['SecretAccessKey'] }}"
         AWS_SECRET_ACCESS_KEY: "{{ (sts_session_output.stdout | from_json)['Credentials']['SecretAccessKey'] }}"
         AWS_SECURITY_TOKEN: "{{ (sts_session_output.stdout | from_json)['Credentials']['SessionToken'] }}"
-  - name: set sts facts
-    set_fact:
-      sts_role:
-        sts_creds: "{{ sts_creds }}"
-  when: not sts_disable | default(false) | bool
+  when: not Sts.Disabled | default(false) | bool
   tags:
     - always
 
 - block:
-  - name: sts session output
-    debug: msg={{ sts_session_output }}
-  - name: sts_creds variable
-    debug: msg={{ sts_creds }}
-  when: debug | default(false) | bool  
+  - name: set sts facts
+    set_fact:
+      Sts: "{{ Sts | combine({ 'Credentials': sts_creds },recursive=True) }}"
   tags:
     - always
 
+- debug: msg={{ sts_session_output }}
+  when: debug | default(false) | bool
+  tags:
+    - always

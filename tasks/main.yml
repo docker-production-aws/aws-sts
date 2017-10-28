@@ -62,7 +62,10 @@
   tags:
     - always
 
-- debug: msg={{ sts_session_output }}
+- block:
+  - debug: msg={{ sts_session_output }}
+  - name: Sts.Credentials variable
+    debug: msg={{ Sts.Credentials }}
   when: debug | default(false) | bool
   tags:
     - always

@@ -21,7 +21,7 @@ To set this role up as an Ansible Galaxy requirement, first create a `requiremen
 # Example requirements.yml file
 - src: https://github.com/docker-production-aws/aws-sts.git
   scm: git
-  version: 1.0.0
+  version: v1.0
   name: aws-sts
 ```
 
@@ -102,6 +102,6 @@ The following shows the recommended play configuration to use the temporary cred
 
 ## Release Notes
 
-### Version 1.0.0
+### Version v1.0
 
 - First Release

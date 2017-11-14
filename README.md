@@ -19,7 +19,7 @@ To set this role up as an Ansible Galaxy requirement, first create a `requiremen
 
 ```
 # Example requirements.yml file
-- src: https://github.com/docker-in-production/aws-sts.git
+- src: https://github.com/docker-production-aws/aws-sts.git
   scm: git
   version: 1.0.0
   name: aws-sts
